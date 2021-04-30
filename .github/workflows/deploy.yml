@@ -29,7 +29,9 @@ jobs:
       run: |
         curl -s https://cloud.minsa.gob.pe/s/ZgXoXqK2KLjRLxD/download | \
           sqlite-utils insert vacunas_covid.db vacunas_covid - --pk UUID --pk DOSIS --csv
-    - name: Deploy datasete to heroku
+    - name: Deploy datasette to heroku
+      env:
+        HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
       run: |-
         npm install -g heroku
         heroku plugins:install heroku-builds
