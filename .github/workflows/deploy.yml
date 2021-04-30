@@ -34,5 +34,5 @@ jobs:
         npm install -g heroku
         heroku plugins:install heroku-builds
         datasette publish heroku vacunas_covid.db \
-          -metadata metadata.json \
-          -name vacunas-covid-peru \
+          --metadata metadata.json \
+          --name vacunas-covid-peru \
