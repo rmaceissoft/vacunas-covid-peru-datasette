@@ -1,0 +1,38 @@
+name: Deploy datasette
+
+on:
+  push:
+    branches:
+    - main
+  workflow_dispatch:
+  schedule:
+    - cron: '15 0 * * *'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Check out this repo
+      uses: actions/checkout@v2
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.6
+    - name: Set up Node
+      uses: actions/setup-node@v1
+      with:
+        node-version: '12'
+    - name: Install Python dependencies
+      run: |
+        pip install -r requirements.txt
+    - name: Build SQLite database
+      run: |
+        curl -s https://cloud.minsa.gob.pe/s/ZgXoXqK2KLjRLxD/download | \
+          sqlite-utils insert vacunas_covid.db vacunas_covid - --pk UUID --pk DOSIS --csv
+    - name: Deploy datasete to heroku
+      run: |-
+        npm install -g heroku
+        heroku plugins:install heroku-builds
+        datasette publish heroku vacunas_covid.db \
+          -metadata metadata.json \
+          -name vacunas-covid-peru \
