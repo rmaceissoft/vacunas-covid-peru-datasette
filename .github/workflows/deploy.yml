@@ -29,6 +29,11 @@ jobs:
       run: |
         curl -s https://cloud.minsa.gob.pe/s/ZgXoXqK2KLjRLxD/download | \
           sqlite-utils insert vacunas_covid.db vacunas_covid - --pk UUID --pk DOSIS --csv
+        sqlite-utils create-view vacunas_covid.db vacunados_por_dia \
+          "select FECHA_VACUNACION, count(*) as TOTAL_VACUNADOS \
+           from vacunas_covid \
+           group by FECHA_VACUNACION \
+           order by FECHA_VACUNACION DESC"
     - name: Deploy datasette to heroku
       env:
         HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
@@ -38,3 +43,4 @@ jobs:
         datasette publish heroku vacunas_covid.db \
           --metadata metadata.json \
           --name vacunas-covid-peru \
+          --install datasette-vega
