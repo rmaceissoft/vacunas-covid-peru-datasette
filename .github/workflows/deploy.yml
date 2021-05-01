@@ -43,4 +43,5 @@ jobs:
         datasette publish heroku vacunas_covid.db \
           --metadata metadata.json \
           --name vacunas-covid-peru \
-          --install datasette-vega
+          --install datasette-vega \
+          --extra-options "--setting sql_time_limit_ms 3000"
