@@ -1,4 +1,4 @@
-name: Deploy datasette
+name: Fetch data and deploy datasette
 
 on:
   push:
@@ -27,13 +27,8 @@ jobs:
         pip install -r requirements.txt
     - name: Build SQLite database
       run: |
-        curl -s https://cloud.minsa.gob.pe/s/ZgXoXqK2KLjRLxD/download | \
-          sqlite-utils insert vacunas_covid.db vacunas_covid - --pk UUID --pk DOSIS --csv
-        sqlite-utils create-view vacunas_covid.db vacunados_por_dia \
-          "select FECHA_VACUNACION, count(*) as TOTAL_VACUNADOS \
-           from vacunas_covid \
-           group by FECHA_VACUNACION \
-           order by FECHA_VACUNACION DESC"
+        curl -s https://cloud.minsa.gob.pe/s/ZgXoXqK2KLjRLxD/download > registro_vacunacion.csv
+        python build_database.py
     - name: Deploy datasette to heroku
       env:
         HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
