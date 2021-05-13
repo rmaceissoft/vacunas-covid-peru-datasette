@@ -2,9 +2,51 @@ import csv
 from datetime import datetime
 from pathlib import Path
 
+import pandas as pd
 import sqlite_utils
 
-BASE_PATH = (Path(__file__) / "..").resolve()
+from utils import strip_accents_spain
+
+
+BASE_PATH = (Path(__file__) / "../..").resolve()
+
+
+DISTRICTS_MAPPING = {
+    "AMAZONAS,LUYA,SAN FRANCISCO DEL YESO": (
+        "AMAZONAS",
+        "LUYA",
+        "SAN FRANCISCO DE YESO",
+    ),
+    "APURIMAC,CHINCHEROS,ANCO-HUALLO": ("APURIMAC", "CHINCHEROS", "ANCO_HUALLO"),
+    "CALLAO,CALLAO,CALLAO": ("CALLAO", "PROV. CONST. DEL CALLAO", "CALLAO"),
+    "CALLAO,CALLAO,BELLAVISTA": ("CALLAO", "PROV. CONST. DEL CALLAO", "BELLAVISTA"),
+    "CALLAO,CALLAO,CARMEN DE LA LEGUA REYNOSO": (
+        "CALLAO",
+        "PROV. CONST. DEL CALLAO",
+        "CARMEN DE LA LEGUA REYNOSO",
+    ),
+    "CALLAO,CALLAO,LA PERLA": ("CALLAO", "PROV. CONST. DEL CALLAO", "LA PERLA"),
+    "CALLAO,CALLAO,LA PUNTA": ("CALLAO", "PROV. CONST. DEL CALLAO", "LA PUNTA"),
+    "CALLAO,CALLAO,VENTANILLA": ("CALLAO", "PROV. CONST. DEL CALLAO", "VENTANILLA"),
+    "CALLAO,CALLAO,MI PERU": ("CALLAO", "PROV. CONST. DEL CALLAO", "MI PERU"),
+    "HUANUCO,HUANUCO,QUISQUI": ("HUANUCO", "HUANUCO", "QUISQUI (KICHKI)"),
+    "ICA,NAZCA,CHANGUILLO": ("ICA", "NASCA", "CHANGUILLO"),
+    "ICA,NAZCA,EL INGENIO": ("ICA", "NASCA", "EL INGENIO"),
+    "ICA,NAZCA,MARCONA": ("ICA", "NASCA", "MARCONA"),
+    "ICA,NAZCA,NAZCA": ("ICA", "NASCA", "NASCA"),
+    "ICA,NAZCA,VISTA ALEGRE": ("ICA", "NASCA", "VISTA ALEGRE"),
+    "JUNIN,CHANCHAMAYO,PICHANAKI": ("JUNIN", "CHANCHAMAYO", "PICHANAQUI"),
+    "LIMA,LIMA,LURIGANCHO (CHOSICA)": ("LIMA", "LIMA", "LURIGANCHO"),
+    "LIMA,LIMA,MAGDALENA VIEJA (PUEBLO LIBRE)": ("LIMA", "LIMA", "PUEBLO LIBRE"),
+    "PIURA,PIURA,VEINTISEIS DE OCTUB": ("PIURA", "PIURA", "VEINTISEIS DE OCTUBRE"),
+    "PUNO,SAN ROMAS,SAN MIGUEL": ("PUNO", "SAN ROMAN", "SAN MIGUEL"),
+    "UCAYALI,PADRE ABAD,ALEXANDER VON HUMBO": (
+        "UCAYALI",
+        "PADRE ABAD",
+        "ALEXANDER VON HUMBOLDT",
+    ),
+    "PASCO,OXAPAMPA,CONSTITUCIÓN": ("PASCO", "OXAPAMPA", "CONSTITUCION"),
+}
 
 
 def transform_date(value, input_format="%Y%m%d"):
@@ -12,10 +54,37 @@ def transform_date(value, input_format="%Y%m%d"):
 
 
 def load_registro_vacunacion_nominal():
-    with (BASE_PATH / "registro_vacunacion.csv").open(
+    with (BASE_PATH / "data/registro_vacunacion.csv").open(
         mode="r", encoding="utf-8-sig"
     ) as csv_file:
+        data_frame = pd.read_csv(
+            BASE_PATH / "data/distritos_peru.csv", dtype={"ubigeo": str}
+        )
+        index = 0
         for row in csv.DictReader(csv_file):
+            index += 1
+            print(f"INFO: processing record {index}")
+            _key = ",".join([row["DEPARTAMENTO"], row["PROVINCIA"], row["DISTRITO"]])
+            q_department, q_province, q_district = DISTRICTS_MAPPING.get(
+                _key,
+                (
+                    strip_accents_spain(row["DEPARTAMENTO"]),
+                    strip_accents_spain(row["PROVINCIA"]),
+                    strip_accents_spain(row["DISTRITO"]),
+                ),
+            )
+            results = data_frame.query(
+                f'departamento == "{q_department}" & provincia == "{q_province}" & distrito == "{q_district}"'
+            )
+            if results.empty:
+                latitude, longitude, ubigeo = None, None, None
+                print(
+                    f"WARNING: Distrito no encontrado: {q_department} -> {q_province} -> {q_district}"
+                )
+            else:
+                latitude = results.values[0][3]
+                longitude = results.values[0][4]
+                ubigeo = results.values[0][5]
             yield {
                 "fecha_corte": transform_date(row["FECHA_CORTE"]),
                 "uuid": row["UUID"],
@@ -29,6 +98,9 @@ def load_registro_vacunacion_nominal():
                 "departamento": row["DEPARTAMENTO"],
                 "provincia": row["PROVINCIA"],
                 "distrito": row["DISTRITO"],
+                "latitude": latitude,
+                "longitude": longitude,
+                "distrito_ubigeo": ubigeo,
             }
 
 
@@ -80,7 +152,7 @@ def load_registro_vacunacion_diaria(db):
 
 
 def main():
-    db = sqlite_utils.Database("registro_vacunacion.db")
+    db = sqlite_utils.Database(BASE_PATH / "data/registro_vacunacion.db")
     table = db["registro_vacunacion_nominal"]
     if table.exists():
         table.drop()

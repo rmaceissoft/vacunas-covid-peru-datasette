@@ -1,2 +1,3 @@
 sqlite-utils==3.6
 datasette==0.56
+pandas==1.1.5
