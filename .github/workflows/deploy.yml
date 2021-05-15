@@ -27,7 +27,6 @@ jobs:
         pip install -r requirements.txt
     - name: Build SQLite database
       run: |
-        curl -s https://cloud.minsa.gob.pe/s/ZgXoXqK2KLjRLxD/download > ./data/registro_vacunacion.csv
         python scripts/build_database.py
     - name: Deploy datasette to heroku
       env:

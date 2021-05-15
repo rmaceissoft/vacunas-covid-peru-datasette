@@ -1,4 +1,4 @@
-import csv
+import hashlib
 from datetime import datetime
 from pathlib import Path
 
@@ -17,6 +17,7 @@ DISTRICTS_MAPPING = {
         "LUYA",
         "SAN FRANCISCO DE YESO",
     ),
+    "APURIMAC,AYMARAES,HUAYLLO": ("APURIMAC", "AYMARAES", "IHUAYLLO"),
     "APURIMAC,CHINCHEROS,ANCO-HUALLO": ("APURIMAC", "CHINCHEROS", "ANCO_HUALLO"),
     "CALLAO,CALLAO,CALLAO": ("CALLAO", "PROV. CONST. DEL CALLAO", "CALLAO"),
     "CALLAO,CALLAO,BELLAVISTA": ("CALLAO", "PROV. CONST. DEL CALLAO", "BELLAVISTA"),
@@ -36,8 +37,14 @@ DISTRICTS_MAPPING = {
     "ICA,NAZCA,NAZCA": ("ICA", "NASCA", "NASCA"),
     "ICA,NAZCA,VISTA ALEGRE": ("ICA", "NASCA", "VISTA ALEGRE"),
     "JUNIN,CHANCHAMAYO,PICHANAKI": ("JUNIN", "CHANCHAMAYO", "PICHANAQUI"),
+    "JUNIN,CONCEPCION,SANTO DOMINGO DE ACOBAMBA": (
+        "JUNIN",
+        "HUANCAYO",
+        "SANTO DOMINGO DE ACOBAMBA",
+    ),
     "LIMA,LIMA,LURIGANCHO (CHOSICA)": ("LIMA", "LIMA", "LURIGANCHO"),
     "LIMA,LIMA,MAGDALENA VIEJA (PUEBLO LIBRE)": ("LIMA", "LIMA", "PUEBLO LIBRE"),
+    "LIMA,YAUYOS,AYAUCA": ("LIMA", "YAUYOS", "ALLAUCA"),
     "PIURA,PIURA,VEINTISEIS DE OCTUB": ("PIURA", "PIURA", "VEINTISEIS DE OCTUBRE"),
     "PUNO,SAN ROMAS,SAN MIGUEL": ("PUNO", "SAN ROMAN", "SAN MIGUEL"),
     "UCAYALI,PADRE ABAD,ALEXANDER VON HUMBO": (
@@ -53,55 +60,65 @@ def transform_date(value, input_format="%Y%m%d"):
     return datetime.strptime(value, input_format).date().isoformat()
 
 
+def get_hash_value(value):
+    hash_object = hashlib.sha256(value.encode())
+    return hash_object.hexdigest()
+
+
+def normalize_and_hash(row):
+    value = ",".join([row["DEPARTAMENTO"], row["PROVINCIA"], row["DISTRITO"]])
+    department, province, district = DISTRICTS_MAPPING.get(
+        value,
+        (
+            strip_accents_spain(row["DEPARTAMENTO"]),
+            strip_accents_spain(row["PROVINCIA"]),
+            strip_accents_spain(row["DISTRITO"]),
+        ),
+    )
+    return get_hash_value(",".join([department, province, district]))
+
+
 def load_registro_vacunacion_nominal():
-    with (BASE_PATH / "data/registro_vacunacion.csv").open(
-        mode="r", encoding="utf-8-sig"
-    ) as csv_file:
-        data_frame = pd.read_csv(
-            BASE_PATH / "data/distritos_peru.csv", dtype={"ubigeo": str}
-        )
-        index = 0
-        for row in csv.DictReader(csv_file):
-            index += 1
-            print(f"INFO: processing record {index}")
-            _key = ",".join([row["DEPARTAMENTO"], row["PROVINCIA"], row["DISTRITO"]])
-            q_department, q_province, q_district = DISTRICTS_MAPPING.get(
-                _key,
-                (
-                    strip_accents_spain(row["DEPARTAMENTO"]),
-                    strip_accents_spain(row["PROVINCIA"]),
-                    strip_accents_spain(row["DISTRITO"]),
-                ),
-            )
-            results = data_frame.query(
-                f'departamento == "{q_department}" & provincia == "{q_province}" & distrito == "{q_district}"'
-            )
-            if results.empty:
-                latitude, longitude, ubigeo = None, None, None
-                print(
-                    f"WARNING: Distrito no encontrado: {q_department} -> {q_province} -> {q_district}"
-                )
-            else:
-                latitude = results.values[0][3]
-                longitude = results.values[0][4]
-                ubigeo = results.values[0][5]
-            yield {
-                "fecha_corte": transform_date(row["FECHA_CORTE"]),
-                "uuid": row["UUID"],
-                "grupo_riesgo": row["GRUPO_RIESGO"],
-                "edad": row["EDAD"],
-                "sexo": row["SEXO"],
-                "fecha_vacunacion": transform_date(row["FECHA_VACUNACION"]),
-                "dosis": row["DOSIS"],
-                "fabricante": row["FABRICANTE"],
-                "diresa": row["DIRESA"],
-                "departamento": row["DEPARTAMENTO"],
-                "provincia": row["PROVINCIA"],
-                "distrito": row["DISTRITO"],
-                "latitude": latitude,
-                "longitude": longitude,
-                "distrito_ubigeo": ubigeo,
-            }
+    df_vaccination = pd.read_csv(
+        "https://cloud.minsa.gob.pe/s/ZgXoXqK2KLjRLxD/download",
+        dtype={"FECHA_CORTE": str, "FECHA_VACUNACION": str, "EDAD": "Int64"},
+    )
+    df_districts = pd.read_csv(
+        BASE_PATH / "data/distritos_peru.csv", dtype={"ubigeo": str}
+    )
+    # add a new column with a hash of Department,Province,District, which will be used
+    # to merge the district lat, long and ubigeo with the nominal vaccination records
+    df_vaccination["hash_value"] = df_vaccination.apply(normalize_and_hash, axis=1)
+    df_districts["hash_value"] = df_districts.apply(
+        lambda row: get_hash_value(
+            ",".join([row["departamento"], row["provincia"], row["distrito"]])
+        ),
+        axis=1,
+    )
+    df_vaccination = df_vaccination.merge(
+        df_districts[["latitud", "longitud", "ubigeo", "hash_value"]],
+        how="left",
+        left_on="hash_value",
+        right_on="hash_value",
+    ).drop(columns=["hash_value"])
+    for index, row in df_vaccination.iterrows():
+        yield {
+            "fecha_corte": transform_date(row["FECHA_CORTE"]),
+            "uuid": row["UUID"],
+            "grupo_riesgo": row["GRUPO_RIESGO"],
+            "edad": row["EDAD"] if not pd.isnull(row["EDAD"]) else None,
+            "sexo": row["SEXO"],
+            "fecha_vacunacion": transform_date(row["FECHA_VACUNACION"]),
+            "dosis": row["DOSIS"],
+            "fabricante": row["FABRICANTE"],
+            "diresa": row["DIRESA"],
+            "departamento": row["DEPARTAMENTO"],
+            "provincia": row["PROVINCIA"],
+            "distrito": row["DISTRITO"],
+            "latitud": row["latitud"],
+            "longitud": row["longitud"],
+            "distrito_ubigeo": row["ubigeo"],
+        }
 
 
 def calculate_totales_por_fecha_y_dosis(db, fecha_vacunacion, dosis):
