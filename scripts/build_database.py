@@ -9,6 +9,9 @@ from utils import strip_accents_spain
 
 
 BASE_PATH = (Path(__file__) / "../..").resolve()
+# Total population in Peru updated until 2019. This value was obtained from CELAC
+# https://www.ceplan.gob.pe/informacion-sobre-zonas-y-departamentos-del-peru/
+TOTAL_POPULATION = 34319172
 
 
 DISTRICTS_MAPPING = {
@@ -163,8 +166,10 @@ def load_registro_vacunacion_diaria(db):
             "fecha_vacunacion": fecha_vacunacion,
             "total_vacunados_nuevos_primera_dosis": nuevos_primera_dosis,
             "total_vacunados_acumulados_primera_dosis": acumulados_primera_dosis,
+            "porciento_vacunados_primera_dosis": round((acumulados_primera_dosis / TOTAL_POPULATION) * 100, 2),
             "total_vacunados_nuevos_segunda_dosis": nuevos_segunda_dosis,
             "total_vacunados_acumulados_segunda_dosis": acumulados_segunda_dosis,
+            "porciento_vacunados_segunda_dosis": round((acumulados_segunda_dosis / TOTAL_POPULATION) * 100, 2)
         }
 
 

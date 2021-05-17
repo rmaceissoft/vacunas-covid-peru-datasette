@@ -12,5 +12,5 @@ Desplegado en **heroku** en el siguiente enlace: https://vacunas-covid-peru.hero
 ## Fuentes de datos
 
 - [Registro de vacunación nominal publicado por el MINSA en el portal de datos abiertos](https://www.datosabiertos.gob.pe/dataset/vacunaci%C3%B3n-contra-covid-19-ministerio-de-salud-minsa)
-- [Valores de latitud y longitud de los distritos del Perú reportados por CEPLAN y actualizados hasta el 2019](https://www.ceplan.gob.pe/download/224516/)
+- [Indices de población y valores de latitud y longitud de los distritos del Perú reportados por CEPLAN y actualizados hasta el 2019](https://www.ceplan.gob.pe/download/224516/)
 - [Códigos UBIGEO publicados por el INEI y disponibles en formato CSV a través de un repositorio del CONCYTEC](https://github.com/CONCYTEC/ubigeo-peru)

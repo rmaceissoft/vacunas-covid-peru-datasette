@@ -12,5 +12,21 @@
       "latitude_column": "latitud",
       "longitude_column": "longitud"
     }
-  }
+  },
+  "databases": {
+    "registro_vacunacion": {
+      "tables": {
+        "registro_vacunacion_diario": {
+          "sort_desc": "fecha_vacunacion",
+          "units": {
+            "porciento_vacunados_primera_dosis": "percent",
+            "porciento_vacunados_segunda_dosis": "percent"
+          }
+        }
+      }
+    }
+  },
+  "custom_units": [
+    "percent = 1 = %"
+  ]
 }
