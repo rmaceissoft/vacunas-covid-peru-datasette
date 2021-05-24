@@ -2,11 +2,11 @@ name: Fetch data and deploy datasette
 
 on:
   push:
-    branches:
-    - master
+    paths:
+    - .github/workflows/deploy.yml
   workflow_dispatch:
   schedule:
-    - cron: '0 14 * * *'
+    - cron: '0 12 * * *'
 
 jobs:
   deploy:
