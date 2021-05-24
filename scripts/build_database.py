@@ -5,7 +5,7 @@ from pathlib import Path
 import pandas as pd
 import sqlite_utils
 
-from utils import strip_accents_spain
+from utils import read_csv_from_url, strip_accents_spain
 
 
 BASE_PATH = (Path(__file__) / "../..").resolve()
@@ -82,7 +82,7 @@ def normalize_and_hash(row):
 
 
 def load_registro_vacunacion_nominal():
-    df_vaccination = pd.read_csv(
+    df_vaccination = read_csv_from_url(
         "https://cloud.minsa.gob.pe/s/ZgXoXqK2KLjRLxD/download",
         dtype={"FECHA_CORTE": str, "FECHA_VACUNACION": str, "EDAD": "Int64"},
     )
