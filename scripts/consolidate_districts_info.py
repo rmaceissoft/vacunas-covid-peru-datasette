@@ -18,7 +18,12 @@ def main():
         URL_UBIGEO_INEI,
         encoding="latin",
         dtype={"cod_dep_inei": str},
-        usecols=["desc_dep_inei", "desc_prov_inei", "desc_ubigeo_inei", "cod_ubigeo_inei"]
+        usecols=[
+            "desc_dep_inei",
+            "desc_prov_inei",
+            "desc_ubigeo_inei",
+            "cod_ubigeo_inei",
+        ],
     )
     with open("./data/distritos_peru.csv", "w", newline="") as output_csv:
         output_writer = csv.writer(output_csv)
