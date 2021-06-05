@@ -9,9 +9,9 @@ from utils import read_csv_from_url, strip_accents_spain
 
 
 BASE_PATH = (Path(__file__) / "../..").resolve()
-# Total population in Peru updated until 2019. This value was obtained from CELAC
-# https://www.ceplan.gob.pe/informacion-sobre-zonas-y-departamentos-del-peru/
-TOTAL_POPULATION = 34319172
+# Electoral population (18 years or older) of the 2021 general election process
+# published by RENIEC (excluding residents abroad)
+TOTAL_POPULATION = 24290921
 
 
 DISTRICTS_MAPPING = {
