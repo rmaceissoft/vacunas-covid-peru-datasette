@@ -83,7 +83,7 @@ def normalize_and_hash(row):
 
 def load_registro_vacunacion_nominal():
     df_vaccination = read_csv_from_url(
-        "https://cloud.minsa.gob.pe/s/ZgXoXqK2KLjRLxD/download",
+        "https://cloud.minsa.gob.pe/s/To2QtqoNjKqobfw/download",
         dtype={"FECHA_CORTE": str, "FECHA_VACUNACION": str, "EDAD": "Int64"},
     )
     df_districts = pd.read_csv(

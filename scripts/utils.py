@@ -1,7 +1,8 @@
 import unicodedata
-from io import StringIO
+from io import BytesIO, StringIO
 
 import pandas as pd
+import py7zr
 import requests
 
 
@@ -17,8 +18,9 @@ def read_csv_from_url(url, **kwargs):
         "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.14; rv:66.0) Gecko/20100101 Firefox/66.0"
     }
     req = requests.get(url, headers=headers)
-    data = StringIO(req.text)
-    df = pd.read_csv(data, **kwargs)
+    archive = py7zr.SevenZipFile(BytesIO(req.content), mode='r')
+    archive.extractall(path="./data")
+    df = pd.read_csv("./data/vacunas_covid.csv", **kwargs)
     return df
 
 
